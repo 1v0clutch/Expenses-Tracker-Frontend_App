@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "expense-tracker",
+    "name": "Spendly",
     "slug": "expense-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "expensetracker",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "icon": "./assets/expo.icon"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#111019",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -28,11 +28,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#111019"
         }
-      ]
+      ],
+      "expo-image",
+      "expo-web-browser",
+      "expo-sharing",
+      ["expo-image-picker", {"photosPermission":"Allow Spendly to access photos to attach receipt images to your expenses."}]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -40,3 +42,6 @@
     }
   }
 }
+
+
+

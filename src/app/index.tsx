@@ -1,332 +1,36 @@
 import { useMemo } from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { PriorityBadge } from '@/components/ui/PriorityBadge';
 import { useExpensesContext } from '@/context/ExpensesContext';
-import { PRIORITY_ORDER } from '@/types/expense';
+import { dateKey, formatMoney, isCurrentMonth, isCurrentWeek, palette } from '@/constants/spendly-theme';
 
-function fmt(amount: number) {
-  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-function fmtDate(date: string) {
-  return new Date(date).toLocaleDateString('en-PH', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
+const days = ['M','T','W','T','F','S','S'];
 export default function DashboardScreen() {
-  const { expenses, planned, income } = useExpensesContext();
-
-  const thisMonth = useMemo(() => {
-    const now = new Date();
-    return expenses
-      .filter(e => {
-        const d = new Date(e.date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      })
-      .reduce((s, e) => s + e.amount, 0);
-  }, [expenses]);
-
-  const incomeThisMonth = useMemo(() => income.filter(item => { const d = new Date(item.date); const now = new Date(); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); }).reduce((sum, item) => sum + item.amount, 0), [income]);
-  const thisWeek = useMemo(() => expenses.filter(item => Date.now() - new Date(item.date).getTime() < 7 * 24 * 60 * 60 * 1000).reduce((sum, item) => sum + item.amount, 0), [expenses]);
-
-  const recent = useMemo(() => expenses.slice(0, 3), [expenses]);
-
-  const highPriority = useMemo(
-    () =>
-      planned
-        .filter(p => p.priority === 'High')
-        .sort((a, b) => {
-          const po = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-          if (po !== 0) return po;
-          if (!a.dueDate && !b.dueDate) return 0;
-          if (!a.dueDate) return 1;
-          if (!b.dueDate) return -1;
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        }),
-    [planned]
-  );
-
-  const stats = [
-    { label: 'Balance this month', value: fmt(incomeThisMonth - thisMonth) },
-    { label: 'Income this month', value: fmt(incomeThisMonth) },
-    { label: 'Monthly spending', value: fmt(thisMonth) },
-    { label: 'This week', value: fmt(thisWeek) },
-    { label: 'Planned', value: String(planned.length) },
-  ];
-
-  return (
-    <View style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.headerSafe}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Dashboard</Text>
-          <Text style={styles.headerSub}>Your financial overview</Text>
-        </View>
-      </SafeAreaView>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}>
-
-        {/* Stat Cards */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.statsRow}>
-          {stats.map(s => (
-            <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statLabel}>{s.label}</Text>
-              <Text style={styles.statValue}>{s.value}</Text>
-            </View>
-          ))}
-        </ScrollView>
-
-        {/* Recent Expenses */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Expenses</Text>
-            <TouchableOpacity accessibilityRole="link">
-              <Text style={styles.sectionLink}>See all →</Text>
-            </TouchableOpacity>
-          </View>
-
-          {recent.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No expenses yet.</Text>
-            </View>
-          ) : (
-            <View style={styles.recentList}>
-              {recent.map(e => (
-                <View key={e.id} style={styles.recentItem}>
-                  <View style={styles.recentLeft}>
-                    <Text style={styles.recentName}>{e.name}</Text>
-                    <Text style={styles.recentMeta}>
-                      {e.category} · {fmtDate(e.date)}
-                    </Text>
-                  </View>
-                  <Text style={styles.recentAmount}>{fmt(e.amount)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* High Priority */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>High Priority</Text>
-            <TouchableOpacity accessibilityRole="link">
-              <Text style={styles.sectionLink}>See all →</Text>
-            </TouchableOpacity>
-          </View>
-
-          {highPriority.length === 0 ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No high priority items.</Text>
-            </View>
-          ) : (
-            <View style={styles.priorityList}>
-              {highPriority.map(p => (
-                <View key={p.id} style={styles.priorityItem}>
-                  <View style={styles.priorityLeft}>
-                    <PriorityBadge priority={p.priority} />
-                    <View style={styles.priorityInfo}>
-                      <Text style={styles.priorityName}>{p.name}</Text>
-                      <Text style={styles.priorityMeta}>
-                        {p.category}
-                        {p.dueDate ? ` · Due ${fmtDate(p.dueDate)}` : ''}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.priorityAmount}>{fmt(p.amount)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={{ height: 120 }} />
-      </ScrollView>
-    </View>
-  );
+ const router=useRouter(); const {expenses,planned,income,budgets,settings}=useExpensesContext();
+ const monthExpenses=useMemo(()=>expenses.filter(e=>isCurrentMonth(e.date)),[expenses]);
+ const monthIncome=useMemo(()=>income.filter(i=>isCurrentMonth(i.date)),[income]);
+ const weekExpenses=useMemo(()=>expenses.filter(e=>isCurrentWeek(e.date)),[expenses]);
+ const spent=monthExpenses.reduce((s,e)=>s+e.amount,0), earned=monthIncome.reduce((s,i)=>s+i.amount,0);
+ const allSpent=expenses.reduce((s,e)=>s+e.amount,0), allEarned=income.reduce((s,i)=>s+i.amount,0);
+ const monthlyBudget=budgets.reduce((s,b)=>s+b.limit,0), weeklyLimit=monthlyBudget/4.33, weeklySpent=weekExpenses.reduce((s,e)=>s+e.amount,0);
+ const highCategory=Object.entries(monthExpenses.reduce<Record<string,number>>((a,e)=>{a[e.category]=(a[e.category]||0)+e.amount;return a;},{})).sort((a,b)=>b[1]-a[1])[0];
+ const paymentData=Object.entries(monthExpenses.reduce<Record<string,number>>((a,e)=>{const key=e.paymentMethod||'Cash';a[key]=(a[key]||0)+e.amount;return a;},{})).sort((a,b)=>b[1]-a[1]).slice(0,4);
+ const daily=days.map((_,i)=>{const now=new Date(),idx=(now.getDay()+6)%7,target=new Date(now);target.setDate(now.getDate()-(idx-i));const key=dateKey(target);return expenses.filter(e=>e.date.slice(0,10)===key).reduce((s,e)=>s+e.amount,0)});
+ const maxDaily=Math.max(...daily,1); const currency=settings.currency;
+ const recent=[...expenses].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,4);
+ return <View style={s.root}><SafeAreaView edges={['top']} style={s.safe}><View style={s.header}><View><Text style={s.kicker}>SPENDLY · OVERVIEW</Text><Text style={s.heading}>Good {new Date().getHours()<12?'morning':new Date().getHours()<18?'afternoon':'evening'}, {settings.name||'Guest'}</Text><Text style={s.subheading}>Your money at a glance.</Text></View><TouchableOpacity style={s.avatar} onPress={()=>router.push('/account')}><Text style={s.avatarText}>{(settings.name||'G')[0].toUpperCase()}</Text></TouchableOpacity></View></SafeAreaView>
+ <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+  <View style={s.balanceCard}><View style={s.balanceHeader}><View><Text style={s.balanceLabel}>CURRENT BALANCE</Text><Text style={s.balanceValue}>{formatMoney(allEarned-allSpent,currency)}</Text></View><View style={s.balanceIcon}><Text style={s.balanceIconText}>◈</Text></View></View><View style={s.balanceDivider}/><View style={s.balanceFooter}><Text style={s.balanceFootText}>Income this month　<Text style={s.balanceFootValue}>{formatMoney(earned,currency)}</Text></Text><Text style={s.balanceFootText}>Spent　<Text style={s.balanceFootValue}>{formatMoney(spent,currency)}</Text></Text></View></View>
+  <View style={s.summaryRow}>{[{label:'TOTAL INCOME',value:formatMoney(allEarned,currency),icon:'↙',tone:palette.green},{label:'TOTAL EXPENSES',value:formatMoney(allSpent,currency),icon:'↗',tone:palette.coral}].map(item=><View key={item.label} style={s.summaryCard}><View style={s.summaryTop}><Text style={s.summaryLabel}>{item.label}</Text><Text style={[s.summaryIcon,{color:item.tone}]}>{item.icon}</Text></View><Text style={s.summaryValue}>{item.value}</Text><Text style={s.summaryHint}>This month <Text style={{color:item.tone}}>{item.label==='TOTAL INCOME'?formatMoney(earned,currency):formatMoney(spent,currency)}</Text></Text></View>)}</View>
+  <View style={s.panel}><View style={s.panelHead}><View><Text style={s.panelTitle}>This week</Text><Text style={s.panelSub}>Your daily spending</Text></View><View style={[s.statusPill,{backgroundColor:weeklyLimit&&weeklySpent>weeklyLimit?palette.coralWash:palette.greenWash}]}><Text style={{color:weeklyLimit&&weeklySpent>weeklyLimit?palette.coral:palette.green,fontSize:9,fontWeight:'800'}}>{!weeklyLimit?'SET A BUDGET':weeklySpent>weeklyLimit?'OVER LIMIT':'ON TRACK'}</Text></View></View><Text style={s.weekTotal}>{formatMoney(weeklySpent,currency)} <Text style={s.weekTotalCaption}>spent in the last 7 days</Text></Text><View style={s.weekChart}>{daily.map((value,i)=><View style={s.weekColumn} key={`${days[i]}-${i}`}><Text style={s.weekValue}>{value?formatMoney(value,currency):''}</Text><View style={s.weekTrack}><View style={[s.weekBar,{height:`${Math.max(value?9:3,value/maxDaily*100)}%`,backgroundColor:weeklyLimit&&weeklySpent>weeklyLimit?palette.coral:palette.purple}]}/></View><Text style={s.weekDay}>{days[i]}</Text></View>)}</View>{weeklyLimit>0&&<Text style={s.budgetCaption}>Weekly allowance {formatMoney(weeklyLimit,currency)} · {formatMoney(Math.max(weeklyLimit-weeklySpent,0),currency)} left</Text>}</View>
+  <View style={s.twoCol}><View style={[s.panel,s.flexPanel]}><View style={s.panelHead}><View><Text style={s.panelTitle}>This month</Text><Text style={s.panelSub}>Budget progress</Text></View></View><Text style={s.monthValue}>{formatMoney(spent,currency)}</Text><Text style={s.panelSub}>{monthlyBudget?`of ${formatMoney(monthlyBudget,currency)} planned`:'No budget set yet'}</Text><View style={s.progressTrack}><View style={[s.progressFill,{width:`${monthlyBudget?Math.min(spent/monthlyBudget*100,100):0}%`,backgroundColor:monthlyBudget&&spent>monthlyBudget?palette.coral:palette.purple}]}/></View><Text style={[s.budgetCaption,{color:monthlyBudget&&spent>monthlyBudget?palette.coral:palette.muted}]}>{monthlyBudget?(spent>monthlyBudget?`Over by ${formatMoney(spent-monthlyBudget,currency)}`:`${formatMoney(monthlyBudget-spent,currency)} remaining`):'Add category limits in Plan'}</Text>{highCategory&&<View style={s.topCategory}><Text style={s.panelSub}>HIGHEST CATEGORY</Text><Text style={s.topCategoryName}>{highCategory[0]}</Text><Text style={s.topCategoryAmount}>{formatMoney(highCategory[1],currency)} spent</Text></View>}</View>
+  <View style={[s.panel,s.flexPanel]}><View style={s.panelHead}><View><Text style={s.panelTitle}>Payment methods</Text><Text style={s.panelSub}>Spending this month</Text></View></View>{paymentData.length?paymentData.map(([method,value],i)=><View key={method} style={s.methodRow}><View style={s.methodLabel}><View style={[s.dot,{backgroundColor:[palette.purple,palette.blue,palette.amber,palette.green][i]}]}/><Text style={s.methodName}>{method}</Text><Text style={s.methodAmount}>{formatMoney(value,currency)}</Text></View><View style={s.progressTrack}><View style={[s.progressFill,{width:`${Math.max(value/spent*100,3)}%`,backgroundColor:[palette.purple,palette.blue,palette.amber,palette.green][i]}]}/></View></View>):<Text style={s.emptyCopy}>Add an expense to see your payment breakdown.</Text>}</View></View>
+  <View style={s.panel}><View style={s.panelHead}><View><Text style={s.panelTitle}>Cashflow summary</Text><Text style={s.panelSub}>Current month</Text></View><TouchableOpacity onPress={()=>router.push('/cashflow')}><Text style={s.link}>Details →</Text></TouchableOpacity></View><View style={s.cashflowRow}><View style={s.cashflowItem}><Text style={s.cashflowLabel}>INCOME</Text><Text style={[s.cashflowValue,{color:palette.green}]}>{formatMoney(earned,currency)}</Text></View><Text style={s.cashflowMinus}>−</Text><View style={s.cashflowItem}><Text style={s.cashflowLabel}>EXPENSES</Text><Text style={[s.cashflowValue,{color:palette.coral}]}>{formatMoney(spent,currency)}</Text></View><Text style={s.cashflowEquals}>=</Text><View style={s.cashflowItem}><Text style={s.cashflowLabel}>NET</Text><Text style={s.cashflowValue}>{formatMoney(earned-spent,currency)}</Text></View></View></View>
+  <View style={s.panel}><View style={s.panelHead}><View><Text style={s.panelTitle}>Recent transactions</Text><Text style={s.panelSub}>Your latest activity</Text></View><TouchableOpacity onPress={()=>router.push('/expenses')}><Text style={s.link}>View all →</Text></TouchableOpacity></View>{recent.length?recent.map(item=><View key={item.id} style={s.transaction}><View style={s.transactionIcon}><Text style={s.transactionGlyph}>{item.category.toLowerCase().includes('food')?'◉':'↗'}</Text></View><View style={s.transactionInfo}><Text style={s.transactionName} numberOfLines={1}>{item.name}</Text><Text style={s.transactionMeta}>{item.category} · {new Date(item.date+'T00:00:00').toLocaleDateString('en',{month:'short',day:'numeric'})}</Text></View><Text style={s.transactionAmount}>−{formatMoney(item.amount,currency)}</Text></View>):<View style={s.empty}><Text style={s.emptyCopy}>Your recent activity will show here.</Text><TouchableOpacity onPress={()=>router.push('/expenses')}><Text style={s.link}>Add your first expense →</Text></TouchableOpacity></View>}</View>
+  <View style={s.bottomSpace}/>
+ </ScrollView></View>;
 }
+const s=StyleSheet.create({root:{flex:1,backgroundColor:palette.page},safe:{backgroundColor:palette.page},header:{paddingHorizontal:19,paddingTop:7,paddingBottom:14,flexDirection:'row',justifyContent:'space-between',alignItems:'center'},kicker:{fontSize:8,fontWeight:'900',letterSpacing:1.5,color:'#b29aff'},heading:{fontSize:21,fontWeight:'900',letterSpacing:-.55,color:palette.text,marginTop:5},subheading:{fontSize:10,color:palette.muted,marginTop:3},avatar:{height:38,width:38,borderRadius:20,alignItems:'center',justifyContent:'center',backgroundColor:palette.purpleWash,borderWidth:1,borderColor:'#524275'},avatarText:{fontSize:14,fontWeight:'900',color:'#dacfff'},content:{paddingHorizontal:15,paddingTop:4,gap:12,paddingBottom:24},balanceCard:{borderRadius:19,padding:17,backgroundColor:'#34274f',borderWidth:1,borderColor:'#524078'},balanceHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},balanceLabel:{fontSize:8,fontWeight:'900',letterSpacing:1.25,color:'#c3b3e9'},balanceValue:{fontSize:27,fontWeight:'900',letterSpacing:-.7,color:'#fff',marginTop:6},balanceIcon:{width:39,height:39,borderRadius:13,backgroundColor:'#4c3976',alignItems:'center',justifyContent:'center'},balanceIconText:{fontSize:19,color:'#d1c1ff'},balanceDivider:{height:1,backgroundColor:'#574578',marginVertical:14},balanceFooter:{flexDirection:'row',justifyContent:'space-between'},balanceFootText:{fontSize:8,color:'#d1c4ec'},balanceFootValue:{fontWeight:'800',color:'#fff'},summaryRow:{flexDirection:'row',gap:10},summaryCard:{flex:1,backgroundColor:palette.panel,borderRadius:14,borderWidth:1,borderColor:palette.border,padding:13},summaryTop:{flexDirection:'row',justifyContent:'space-between',alignItems:'center'},summaryLabel:{fontSize:8,fontWeight:'900',letterSpacing:.6,color:palette.muted},summaryIcon:{fontSize:15,fontWeight:'900'},summaryValue:{fontSize:16,fontWeight:'900',color:palette.text,marginTop:8},summaryHint:{fontSize:8,color:palette.subtle,marginTop:5},panel:{backgroundColor:palette.panel,borderRadius:15,borderWidth:1,borderColor:palette.border,padding:15},panelHead:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8},panelTitle:{fontSize:12,fontWeight:'900',color:palette.text},panelSub:{fontSize:9,color:palette.muted,marginTop:3},statusPill:{paddingHorizontal:9,paddingVertical:6,borderRadius:12},weekTotal:{fontSize:19,fontWeight:'900',color:palette.text,marginTop:13},weekTotalCaption:{fontSize:9,fontWeight:'500',color:palette.muted},weekChart:{height:110,flexDirection:'row',justifyContent:'space-around',alignItems:'stretch',marginTop:7},weekColumn:{flex:1,alignItems:'center',justifyContent:'flex-end'},weekValue:{height:14,fontSize:7,color:'#c7b5ff'},weekTrack:{height:79,width:'70%',justifyContent:'flex-end',alignItems:'center'},weekBar:{width:'65%',borderTopLeftRadius:5,borderTopRightRadius:5,minHeight:3},weekDay:{fontSize:8,color:palette.muted,marginTop:6},budgetCaption:{fontSize:8,color:palette.muted,marginTop:8},twoCol:{flexDirection:'row',gap:10},flexPanel:{flex:1,minWidth:0,paddingHorizontal:12},monthValue:{fontSize:18,fontWeight:'900',color:palette.text,marginTop:14},progressTrack:{height:6,backgroundColor:palette.raised,borderRadius:5,overflow:'hidden',marginTop:9},progressFill:{height:'100%',borderRadius:5},topCategory:{marginTop:17,paddingTop:12,borderTopWidth:1,borderTopColor:palette.border},topCategoryName:{fontSize:11,fontWeight:'800',color:palette.text,marginTop:6},topCategoryAmount:{fontSize:9,color:palette.amber,marginTop:3},methodRow:{marginTop:13},methodLabel:{flexDirection:'row',alignItems:'center',gap:6},dot:{width:7,height:7,borderRadius:4},methodName:{fontSize:8,color:palette.muted,flex:1},methodAmount:{fontSize:8,fontWeight:'800',color:palette.text},link:{fontSize:9,fontWeight:'800',color:'#bca8ff'},emptyCopy:{fontSize:9,lineHeight:15,color:palette.muted},cashflowRow:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',marginTop:18},cashflowItem:{flex:1},cashflowLabel:{fontSize:7,fontWeight:'900',letterSpacing:.6,color:palette.muted},cashflowValue:{fontSize:10,fontWeight:'900',marginTop:5,color:palette.text},cashflowMinus:{color:palette.subtle,fontSize:13,paddingHorizontal:4},cashflowEquals:{color:palette.subtle,fontSize:13,paddingHorizontal:4},transaction:{flexDirection:'row',alignItems:'center',gap:9,paddingVertical:10,borderTopWidth:1,borderTopColor:palette.border},transactionIcon:{width:31,height:31,borderRadius:10,backgroundColor:palette.purpleWash,alignItems:'center',justifyContent:'center'},transactionGlyph:{fontSize:13,color:'#c8b3ff'},transactionInfo:{flex:1,minWidth:0},transactionName:{fontSize:10,fontWeight:'800',color:palette.text},transactionMeta:{fontSize:8,color:palette.muted,marginTop:3},transactionAmount:{fontSize:9,fontWeight:'800',color:palette.text},empty:{paddingVertical:16,alignItems:'center',gap:7},bottomSpace:{height:10}});
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  headerSafe: {
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 14,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#000',
-    letterSpacing: -0.5,
-  },
-  headerSub: {
-    fontSize: 13,
-    color: '#aaa',
-    marginTop: 2,
-  },
-  scroll: {
-    paddingTop: 20,
-  },
-  // Stats
-  statsRow: {
-    paddingHorizontal: 16,
-    gap: 12,
-    paddingBottom: 4,
-  },
-  statCard: {
-    width: 150,
-    borderWidth: 1,
-    borderColor: '#ebebeb',
-    borderRadius: 10,
-    padding: 16,
-    gap: 6,
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#aaa',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#000',
-    letterSpacing: -0.4,
-  },
-  // Sections
-  section: {
-    marginTop: 28,
-    paddingHorizontal: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#000',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  sectionLink: {
-    fontSize: 13,
-    color: '#aaa',
-    fontWeight: '500',
-  },
-  emptyBox: {
-    paddingVertical: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-    borderRadius: 10,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: '#ccc',
-  },
-  // Recent list
-  recentList: {
-    borderWidth: 1,
-    borderColor: '#ebebeb',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-    gap: 8,
-  },
-  recentLeft: {
-    flex: 1,
-    gap: 2,
-  },
-  recentName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  recentMeta: {
-    fontSize: 12,
-    color: '#aaa',
-  },
-  recentAmount: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#000',
-  },
-  // Priority list
-  priorityList: {
-    borderWidth: 1,
-    borderColor: '#ebebeb',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  priorityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f5f5f5',
-    gap: 10,
-  },
-  priorityLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minWidth: 0,
-  },
-  priorityInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  priorityName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-  },
-  priorityMeta: {
-    fontSize: 12,
-    color: '#aaa',
-  },
-  priorityAmount: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#000',
-    flexShrink: 0,
-  },
-});
+

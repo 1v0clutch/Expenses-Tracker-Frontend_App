@@ -1,21 +1,32 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
-
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
-import { ExpensesProvider } from '@/context/ExpensesContext';
-
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+import { DarkTheme, ThemeProvider } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { useEffect } from "react";
+import {
+  GuestSessionProvider,
+  useGuestSession,
+} from "@/context/GuestSessionContext";
+import {
+  ExpensesProvider,
+  useExpensesContext,
+} from "@/context/ExpensesContext";
+import SessionGate from "@/components/session/SessionGate";
+void SplashScreen.preventAutoHideAsync();
+function AppEntry() {
+  const { ready } = useGuestSession();
+  const { loaded } = useExpensesContext();
+  useEffect(() => {
+    if (ready && loaded) void SplashScreen.hideAsync();
+  }, [ready, loaded]);
+  return <SessionGate />;
+}
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <ExpensesProvider>
-        <AnimatedSplashOverlay />
-        <AppTabs />
-      </ExpensesProvider>
+    <ThemeProvider value={DarkTheme}>
+      <GuestSessionProvider>
+        <ExpensesProvider>
+          <AppEntry />
+        </ExpensesProvider>
+      </GuestSessionProvider>
     </ThemeProvider>
   );
 }
